@@ -99,11 +99,12 @@ input[type=range]{width:100%;accent-color:var(--ink)}
 @media(max-width:650px){.bar{padding-left:14px;padding-right:14px}.bar .btn{font-size:12px;padding:10px 8px;min-height:44px;line-height:1.35;border-radius:18px;display:flex;align-items:center;justify-content:center}.bar .btn.sec{flex:0 0 76px}.bar #share{min-width:0}}
 main{padding-bottom:170px}.bar>div{display:grid;grid-template-columns:auto auto minmax(0,1fr)}#direct-send{grid-column:1/-1}#direct-nav .btn{font-size:12px;padding:8px;margin-top:0}@media(max-width:650px){.bar>div{grid-template-columns:76px 76px minmax(0,1fr)}#direct-send{min-height:40px}}
 </style></head><body>
-<header><div class="hin"><div class="logo">✦</div><h1>ちゃっとスタンプメーカー</h1><span class="pill" id="ver">バージョン 1.0.7</span><div id="lang-switch" role="group" aria-label="UI language"><button id="lang-ja" type="button" lang="ja" aria-pressed="true">日本語</button><button id="lang-en" type="button" lang="en" aria-pressed="false">English</button></div><button class="help" id="hb" aria-label="使い方">？<span class="hl"> 使い方</span></button></div></header>
+<header><div class="hin"><div class="logo">✦</div><h1>ちゃっとスタンプメーカー</h1><span class="pill" id="ver">バージョン 1.0.8</span><div id="lang-switch" role="group" aria-label="UI language"><button id="lang-ja" type="button" lang="ja" aria-pressed="true">日本語</button><button id="lang-en" type="button" lang="en" aria-pressed="false">English</button></div><button class="help" id="hb" aria-label="使い方">？<span class="hl"> 使い方</span></button></div></header>
 <main>
 <div class="steps" id="steps"></div>
 <div class="tabs"><button id="t1" class="on">つくる</button><button id="t2">みんなのスタンプ<span id="bd" class="badge hide">0</span></button></div>
 
+<div class="card" id="tap-mode" style="margin:12px 0;padding:14px 18px"><label style="display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer"><input id="tap-send-mode" type="checkbox" style="width:20px;height:20px;flex:none"><span>タップで送信画面へ</span></label><div id="tap-send-status" role="status" style="font-size:12px;margin-top:6px"></div><small>オンでは、作成画面・共有一覧のスタンプをタップすると、保存済みサイズでDelta Chatへ渡します。送信はDelta Chatで確定してください。サイズ・保存・編集の操作はオフに戻して行います。</small></div>
 <details class="card" id="backup-panel"><summary style="cursor:pointer;font-weight:700">データの引き継ぎ バックアップと復元</summary><p style="font-size:13px">新版へ移る前にバックアップを保存し、新版で読み込みます。画像・共有一覧・自由文・見た目・ハンコ・送信サイズをまとめて引き継げます。</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" id="backup-save" disabled>バックアップを保存</button><button class="btn sec" id="backup-chat" disabled>バックアップをチャットへ</button><label class="btn sec">バックアップを選ぶ<input id="backup-file" type="file" accept=".json,application/json" hidden disabled></label><button class="btn sec" id="backup-apply" disabled>内容を確認して復元する</button><button class="btn sec" id="backup-publish" disabled>復元スタンプをみんなに共有</button></div><p id="backup-status" role="status" style="font-size:13px">データを準備しています</p><small>バックアップには画像と作成者名が入ります。復元はこの端末だけで行い、自動送信はしません。「みんなに共有」を押すと、このチャットのメンバーにコピーを共有します。1.0.3以前の別添付アプリから直接データを読むことはできません。</small></details>
 <section id="v1">
  <div class="card"><h2>① キャラの元になる画像</h2>
@@ -163,6 +164,12 @@ main{padding-bottom:170px}.bar>div{display:grid;grid-template-columns:auto auto 
 /* UI strings only. Never translate canvas captions, user values or stamp data. */
 let uiLanguage='ja';try{if(localStorage.getItem('uiLanguage')==='en')uiLanguage='en'}catch(e){}
 const UI_EN={
+'タップで送信画面へ':'Tap to open chat composer',
+'通常モード：タップで選択・プレビュー':'Normal mode: tap to select or preview',
+'タップ送信モード：タップでDelta Chatへ':'Tap mode: tap a stamp to open Delta Chat',
+'画像を準備しています…':'Preparing image…',
+'オンでは、作成画面・共有一覧のスタンプをタップすると、保存済みサイズでDelta Chatへ渡します。送信はDelta Chatで確定してください。サイズ・保存・編集の操作はオフに戻して行います。':'When on, tapping a stamp in Create or Shared stamps passes it to Delta Chat using your saved size settings. Confirm sending in Delta Chat. Turn this off to adjust size, save or edit.',
+
 '選んだスタンプをチャットに送る':'Send selected stamps to chat',
 '複数選択した場合も1個ずつ渡します。送信はDelta Chatで確定してください。':'Pass one stamp at a time, even when several are selected. Confirm sending in Delta Chat.',
 '前のスタンプ':'Previous','次のスタンプ':'Next',
@@ -374,7 +381,7 @@ let raf=0;function update(){window.scheduleMigrationSave?.();cancelAnimationFram
 function grid(){window.scheduleMigrationSave?.();const g=$("#grid");g.innerHTML="";ITEMS.forEach((it,i)=>{if(it.cat!==st.cat)return;
  const d=document.createElement("div");d.className="cell"+(st.sel.has(i)?" on":"")+(it.k?" hk":"");d.innerHTML='<div class="ck">✓</div>';
  const im=new Image();im.src=imageAt(i);im.alt=it.t;im.className="an-"+animOf(it)+(it.k?" hk":"");d.append(im);
- d.onclick=()=>{st.sel.has(i)?st.sel.delete(i):st.sel.add(i);d.classList.toggle("on");cnt()};
+ d.onclick=()=>{if(tapSendMode){const it=ITEMS[i];tapSend({t:it.t,img:imageAt(i),a:animOf(it),draftOnly:true});return;}st.sel.has(i)?st.sel.delete(i):st.sel.add(i);d.classList.toggle("on");cnt()};
  if(it.cat===3){const x=document.createElement("button");x.className="del";x.textContent="×";x.setAttribute("aria-label","削除");x.onclick=ev=>{ev.stopPropagation();delCustom(i)};d.append(x)}
  g.append(d)});
  if(st.cat===3&&!ITEMS.some(i=>i.cat===3))g.innerHTML='<div class="empty" style="grid-column:1/-1"><b>✏️</b>上の入力欄から、好きな文字のスタンプを追加できます。</div>';
@@ -437,10 +444,15 @@ webxdc.setUpdateListener(u=>{const p=u.payload;if(!p||!p.id)return;if(window.res
 function gallery(){const w=$("#gal");w.innerHTML="";if(!st.gal.length){w.innerHTML='<div class="empty"><b>🫧</b>まだスタンプがありません。<br>「つくる」から共有してみよう。</div>';return}
  const by=Object.create(null);st.gal.forEach(p=>(by[p.addr||p.from]=by[p.addr||p.from]||[]).push(p));
  Object.values(by).forEach(l=>{const h=document.createElement("div");h.className="who";h.dataset.creator=l[0].from;h.dataset.count=l.length;h.textContent=uiLanguage==="en"?`${l[0].from} (${l.length} stamps)`:`${l[0].from}さん（${l.length}個）`;
-  const g=document.createElement("div");g.className="grid";l.forEach(p=>{const d=document.createElement("div");d.className="cell"+(p.m&&p.m.k?" hk":"");const im=new Image();im.src=p.img;im.alt=p.t;im.className="an-"+(p.a||"none");d.append(im);d.onclick=()=>open(p);g.append(d)});w.append(h,g)})}
+  const g=document.createElement("div");g.className="grid";l.forEach(p=>{const d=document.createElement("div");d.className="cell"+(p.m&&p.m.k?" hk":"");const im=new Image();im.src=p.img;im.alt=p.t;im.className="an-"+(p.a||"none");d.append(im);d.onclick=()=>tapSendMode?tapSend(p):open(p);g.append(d)});w.append(h,g)})}
 const mine=p=>p.addr===webxdc.selfAddr;
 function renderCreator(){const p=st.cur;if(!p)return;if(p.draftOnly){$("#mf").textContent=tr("作成中のスタンプ（共有一覧には登録しません）");return;}$("#mf").textContent=uiLanguage==="en"?"By "+p.from+(p.localOnly?" · restored copy (this device only)":"")+(p.originName?" · original creator: "+p.originName:"")+(p.a&&p.a!=="none"?" · animated":""):p.from+"さん作"+(p.localOnly?"・復元コピー（この端末のみ）":"")+(p.originName?"・元の作成者: "+p.originName:"")+(p.a&&p.a!=="none"?"・動くスタンプ":"")}
-let directStamps=[],directIndex=0,directSending=false;
+let directStamps=[],directIndex=0,directSending=false,tapSending=false,tapSendMode=false;
+try{tapSendMode=localStorage.getItem("tapSendMode")==="true"}catch(e){}
+function tapModeStatus(){const box=$("#tap-send-mode");box.checked=tapSendMode;box.disabled=tapSending;$("#tap-mode").setAttribute("aria-busy",String(tapSending));$("#tap-send-status").textContent=tapSending?"画像を準備しています…":tapSendMode?"タップ送信モード：タップでDelta Chatへ":"通常モード：タップで選択・プレビュー"}
+$("#tap-send-mode").onchange=e=>{tapSendMode=e.target.checked;try{localStorage.setItem("tapSendMode",String(tapSendMode))}catch(e){}tapModeStatus()};tapModeStatus();
+async function tapSend(p){if(tapSending||directSending||st.sharing||migrationBusy)return;tapSending=true;tapModeStatus();const options={...outputPrefs};try{const file=await fileOf(p,options);await window.flushMigration?.();await webxdc.sendToChat({file:{name:file.name,base64:file.b64}});toast("画像をチャットへ渡しました。送信はDelta Chatで確定してください")}catch(e){toast("この環境では送れません。保存を使ってください")}finally{tapSending=false;tapModeStatus()}}
+
 $("#direct-send").onclick=()=>{if(st.sharing||!st.sel.size)return;directStamps=[...st.sel].sort((a,b)=>a-b).map(i=>{const it=ITEMS[i];return{t:it.t,img:imageAt(i),a:animOf(it),from:webxdc.selfName,addr:webxdc.selfAddr,draftOnly:true}});directIndex=0;open(directStamps[0])};
 $("#direct-prev").onclick=()=>{if(directSending||directIndex===0)return;open(directStamps[--directIndex])};
 $("#direct-next").onclick=()=>{if(directSending||directIndex>=directStamps.length-1)return;open(directStamps[++directIndex])};
@@ -492,7 +504,7 @@ function migrationSnapshot(){return{imports:st.gal.filter(p=>p.localOnly),draft:
 function editorSettings(){return{bg:st.bg,bgc:st.bgc,frame:st.frame,anim:st.anim,style:st.style,shape:st.shape,zm:+$('#zm').value,ox:+$('#ox').value,oy:+$('#oy').value}}
 async function flushMigration(){if(!migrationReady||migrationBusy)return;clearTimeout(migrationTimer);await migrationWrite(migrationSnapshot());lastSavedImage=st.img}
 function scheduleMigrationSave(){if(!migrationReady||migrationBusy)return;try{localStorage.setItem('editorPrefs',JSON.stringify(editorSettings()))}catch(e){}clearTimeout(migrationTimer);const save=()=>{if(migrationBusy)return;flushMigration().catch(()=>backupStatus('端末への保存に失敗しました。バックアップを書き出してください'))};if(st.img!==lastSavedImage){lastSavedImage=st.img;save()}else migrationTimer=setTimeout(save,350)}
-async function makeBackup(){await migrationLoaded;if(st.sharing||migrationBusy)throw Error('共有や復元が終わるまでお待ちください');await updateQueue;const result={format:MIGRATION_FORMAT,schema:MIGRATION_SCHEMA,appVersion:'1.0.7',createdAt:new Date().toISOString(),origin:migrationOrigin,uiLanguage,draft:draftSnapshot(),stamps:st.gal.map(p=>({key:p.backupKey||migrationOrigin+':'+p.id,t:p.t,from:p.originName||p.from,a:p.a||'none',img:p.img,base:p.base,m:p.m}))};if(result.stamps.length>500||result.draft.custom.length>500)throw Error('バックアップはスタンプ・自由文それぞれ500件までです');if(new TextEncoder().encode(JSON.stringify(result)).length>20*1024*1024)throw Error('バックアップが20MBを超えています');return result}
+async function makeBackup(){await migrationLoaded;if(st.sharing||migrationBusy)throw Error('共有や復元が終わるまでお待ちください');await updateQueue;const result={format:MIGRATION_FORMAT,schema:MIGRATION_SCHEMA,appVersion:'1.0.8',createdAt:new Date().toISOString(),origin:migrationOrigin,uiLanguage,tapSendMode,draft:draftSnapshot(),stamps:st.gal.map(p=>({key:p.backupKey||migrationOrigin+':'+p.id,t:p.t,from:p.originName||p.from,a:p.a||'none',img:p.img,base:p.base,m:p.m}))};if(result.stamps.length>500||result.draft.custom.length>500)throw Error('バックアップはスタンプ・自由文それぞれ500件までです');if(new TextEncoder().encode(JSON.stringify(result)).length>20*1024*1024)throw Error('バックアップが20MBを超えています');return result}
 function backupText(v,max,label){if(typeof v!=='string'||v.length>max)throw Error(label+'が正しくありません');return v}
 function backupColor(v){if(typeof v!=='string'||!/^#[a-f0-9]{6}$/i.test(v))throw Error('色の値が正しくありません');return v}
 async function backupImage(v,optional=false){if(optional&&(v==null))return null;if(!validImage(v)||v.length>6000000)throw Error('画像データが正しくありません');const im=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(Error('読み込めない画像が含まれています'));i.src=v});if(im.width<1||im.height<1||im.width>2048||im.height>2048)throw Error('画像の寸法が上限を超えています');return v}
@@ -508,7 +520,7 @@ async function validateBackup(raw){
  const h=d.hanko;if(typeof h.rough!=='boolean'||typeof h.tilt!=='boolean')throw Error('ハンコ設定が正しくありません');
  const hanko={sei:[...backupText(h.sei,16,'苗字')].slice(0,4).join(''),mei:[...backupText(h.mei,16,'名前')].slice(0,4).join(''),color:has(h.color,['red','black','blue']),font:has(h.font,Object.keys(HKF)),bold:has(h.bold,[0,1,2]),rough:h.rough,tilt:h.tilt,size:hankoSize(num(h.size,25,100))};
  const o=d.output;num(o.scale,25,100);has(o.edge,[96,128,192,256]);has(o.layout,['square','wide','tall']);
- return{stamps,uiLanguage:raw.uiLanguage==='en'?'en':raw.uiLanguage==='ja'?'ja':undefined,draft:{settings,hanko,output:cleanOutput(o),custom:backupCustom(d.custom),image:await backupImage(d.image,true)}};
+ return{stamps,tapSendMode:typeof raw.tapSendMode==='boolean'?raw.tapSendMode:undefined,uiLanguage:raw.uiLanguage==='en'?'en':raw.uiLanguage==='ja'?'ja':undefined,draft:{settings,hanko,output:cleanOutput(o),custom:backupCustom(d.custom),image:await backupImage(d.image,true)}};
 }
 function mergeCustom(list){const keys=new Set(ITEMS.filter(i=>i.cat===3).map(i=>JSON.stringify([i.t,i.e,i.p,i.c])));for(const i of list){const key=JSON.stringify([i.t,i.e,i.p,i.c]);if(!keys.has(key)){ITEMS.push({...i,cat:3});keys.add(key)}}saveCustom()}
 async function applyDraft(d){Object.assign(st,d.settings);st.hk={...d.hanko};outputPrefs={...d.output};mergeCustom(d.custom);for(const id of ['zm','ox','oy'])$('#'+id).value=d.settings[id];
@@ -520,7 +532,7 @@ async function applyDraft(d){Object.assign(st,d.settings);st.hk={...d.hanko};out
 }
 async function restoreBackup(data){if(migrationBusy||st.sharing)throw Error('共有や復元の終了を待ってください');await migrationLoaded;migrationBusy=true;clearTimeout(migrationTimer);try{
  const have=new Set(st.gal.map(p=>p.backupKey||migrationOrigin+':'+p.id));const added=data.stamps.filter(p=>!have.has(p.key)).map(p=>({id:rid(),backupKey:p.key,t:p.t,img:p.img,base:p.base,a:p.a,m:p.m,from:webxdc.selfName,addr:webxdc.selfAddr,originName:p.from,localOnly:true}));
- const custom=[...ITEMS.filter(i=>i.cat===3).map(i=>({t:i.t,e:i.e,p:i.p,c:i.c})),...data.draft.custom];const next={imports:[...st.gal.filter(p=>p.localOnly),...added],draft:{...data.draft,custom}};await migrationWrite(next);st.gal.push(...added);for(const p of added)st.seen.add(p.id);await applyDraft(next.draft);if(data.uiLanguage)setUILanguage(data.uiLanguage);if(st.tab===2)gallery();backupStatus(added.length+'個をこの端末に復元しました。ほかのメンバーへの共有は下のボタンで行います');return added.length;
+ const custom=[...ITEMS.filter(i=>i.cat===3).map(i=>({t:i.t,e:i.e,p:i.p,c:i.c})),...data.draft.custom];const next={imports:[...st.gal.filter(p=>p.localOnly),...added],draft:{...data.draft,custom}};await migrationWrite(next);st.gal.push(...added);for(const p of added)st.seen.add(p.id);await applyDraft(next.draft);if(data.uiLanguage)setUILanguage(data.uiLanguage);if(typeof data.tapSendMode==="boolean"){tapSendMode=data.tapSendMode;try{localStorage.setItem("tapSendMode",String(tapSendMode))}catch(e){}tapModeStatus()}if(st.tab===2)gallery();backupStatus(added.length+'個をこの端末に復元しました。ほかのメンバーへの共有は下のボタンで行います');return added.length;
  }finally{migrationBusy=false}}
 async function publishRestored(){await migrationLoaded;if(migrationBusy||st.sharing)return;migrationBusy=true;clearTimeout(migrationTimer);try{const list=st.gal.filter(p=>p.localOnly);if(!list.length)return backupStatus('未共有の復元スタンプはありません');
  const jobs=list.map(p=>({payload:{id:p.id,backupKey:p.backupKey,t:p.t,img:p.img,base:p.base,a:p.a,m:p.m,from:webxdc.selfName,addr:webxdc.selfAddr,originName:p.originName}}));jobs.forEach(checkUpdate);
